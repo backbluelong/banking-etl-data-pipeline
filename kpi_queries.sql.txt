@@ -1,0 +1,101 @@
+-- =========================================
+-- 1. TOTAL CUSTOMERS
+-- =========================================
+SELECT 
+    COUNT(DISTINCT customer_id) AS total_customers
+FROM bank_dw.dim_customer;
+
+
+-- =========================================
+-- 2. ACTIVE CUSTOMERS (có giao dịch trong 30 ngày gần nhất)
+-- =========================================
+WITH recent_txn AS (
+    SELECT DISTINCT customer_id
+    FROM bank_dw.fact_transaction
+    WHERE txn_date >= CURRENT_DATE - INTERVAL '30 days'
+)
+SELECT COUNT(*) AS active_customers
+FROM recent_txn;
+
+
+-- =========================================
+-- 3. TOTAL TRANSACTION AMOUNT
+-- =========================================
+SELECT 
+    SUM(amount) AS total_transaction_amount
+FROM bank_dw.fact_transaction;
+
+
+-- =========================================
+-- 4. TOTAL LOAN AMOUNT
+-- =========================================
+SELECT 
+    SUM(loan_amount) AS total_loan_amount
+FROM bank_dw.fact_loan;
+
+
+-- =========================================
+-- 5. AVERAGE LOAN AMOUNT PER CUSTOMER
+-- =========================================
+SELECT 
+    AVG(loan_amount) AS avg_loan_per_customer
+FROM bank_dw.fact_loan;
+
+
+-- =========================================
+-- 6. CUSTOMER SEGMENT ANALYSIS (theo tuổi)
+-- =========================================
+SELECT 
+    age_group,
+    COUNT(*) AS total_customers
+FROM bank_dw.dim_customer
+GROUP BY age_group
+ORDER BY total_customers DESC;
+
+
+-- =========================================
+-- 7. TOP 10 CUSTOMERS BY TRANSACTION AMOUNT
+-- =========================================
+SELECT 
+    customer_id,
+    SUM(amount) AS total_spent
+FROM bank_dw.fact_transaction
+GROUP BY customer_id
+ORDER BY total_spent DESC
+LIMIT 10;
+
+
+-- =========================================
+-- 8. MONTHLY TRANSACTION TREND
+-- =========================================
+SELECT 
+    DATE_TRUNC('month', txn_date) AS month,
+    SUM(amount) AS monthly_amount
+FROM bank_dw.fact_transaction
+GROUP BY 1
+ORDER BY month;
+
+
+-- =========================================
+-- 9. LOAN APPROVAL COUNT BY REGION
+-- =========================================
+SELECT 
+    c.region,
+    COUNT(l.loan_id) AS total_loan
+FROM bank_dw.dim_customer c
+JOIN bank_dw.fact_loan l
+ON c.customer_id = l.customer_id
+GROUP BY c.region
+ORDER BY total_loan DESC;
+
+
+-- =========================================
+-- 10. CUSTOMER VALUE RANKING (RFM - chỉ phần Monetary)
+-- =========================================
+SELECT 
+    customer_id,
+    SUM(amount) AS total_monetary,
+    NTILE(4) OVER (ORDER BY SUM(amount) DESC) AS monetary_quartile
+FROM bank_dw.fact_transaction
+GROUP BY customer_id
+ORDER BY total_monetary DESC;
